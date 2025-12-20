@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Camera icon foreground - white camera scaled to fit adaptive icon safe zone
+  ~ Adaptive icons have 108dp total, with 66dp safe zone (21dp margin each side)
+  -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <group android:translateY="-4">
+        <!-- Camera body - scaled and centered in safe zone (33-75 = 42dp range) -->
+        <path
+            android:pathData="M33,48 L33,70 Q33,74 37,74 L71,74 Q75,74 75,70 L75,48 Q75,44 71,44 L68,44 L66.5,40 Q66,39 65,39 L43,39 Q42,39 41.5,40 L40,44 L37,44 Q33,44 33,48 Z"
+            android:fillColor="#FFFFFF"/>
+        
+        <!-- Camera lens outer ring -->
+        <path
+            android:pathData="M54,56 m-12,0 a12,12 0,1 1,24 0 a12,12 0,1 1,-24 0"
+            android:fillColor="#0F2167"/>
+        
+        <!-- Camera lens inner ring -->
+        <path
+            android:pathData="M54,56 m-7,0 a7,7 0,1 1,14 0 a7,7 0,1 1,-14 0"
+            android:fillColor="#FFFFFF"/>
+        
+        <!-- Camera lens center -->
+        <path
+            android:pathData="M54,56 m-3,0 a3,3 0,1 1,6 0 a3,3 0,1 1,-6 0"
+            android:fillColor="#0F2167"/>
+        
+        <!-- Flash/viewfinder dot -->
+        <path
+            android:pathData="M67,47 Q69,47 69,49 L69,50 Q69,52 67,52 L66,52 Q64,52 64,50 L64,49 Q64,47 66,47 Z"
+            android:fillColor="#0F2167"/>
+    </group>
+
+</vector>

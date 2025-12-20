@@ -1,0 +1,51 @@
+/*
+ * Copyright (C) 2025 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.google.jetpackcamera.ui.uistate.capture.compound
+
+import com.google.jetpackcamera.ui.uistate.capture.AspectRatioUiState
+import com.google.jetpackcamera.ui.uistate.capture.CaptureModeUiState
+import com.google.jetpackcamera.ui.uistate.capture.ConcurrentCameraUiState
+import com.google.jetpackcamera.ui.uistate.capture.FlashModeUiState
+import com.google.jetpackcamera.ui.uistate.capture.FlipLensUiState
+import com.google.jetpackcamera.ui.uistate.capture.HdrUiState
+import com.google.jetpackcamera.ui.uistate.capture.StreamConfigUiState
+import com.google.jetpackcamera.model.PhotoResolution
+
+sealed interface QuickSettingsUiState {
+    data object Unavailable : QuickSettingsUiState
+
+    data class Available(
+        val aspectRatioUiState: AspectRatioUiState,
+        val captureModeUiState: CaptureModeUiState,
+        val concurrentCameraUiState: ConcurrentCameraUiState,
+        val flashModeUiState: FlashModeUiState,
+        val flipLensUiState: FlipLensUiState,
+        val hdrUiState: HdrUiState,
+        val streamConfigUiState: StreamConfigUiState,
+        val targetFrameRate: Int = 30,
+        val photoResolution: PhotoResolution = PhotoResolution.STANDARD,
+        val quickSettingsIsOpen: Boolean = false,
+        val focusedQuickSetting: FocusedQuickSetting = FocusedQuickSetting.NONE
+    ) : QuickSettingsUiState
+}
+
+// enum representing which individual quick setting is currently focused
+enum class FocusedQuickSetting {
+    NONE,
+    ASPECT_RATIO,
+    CAPTURE_MODE,
+    PHOTO_RESOLUTION
+}
