@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/7/74/Kotlin_Icon.png" width="80" alt="Iris Logo"/>
+  <img src="https://github.com/user-attachments/assets/9295d37f-b4bb-4740-9e86-d41754fb7a9b" width="120" alt="Iris Logo"/>
   <h1>Iris Camera</h1>
   <h3>Pure Photography. Zero Processing.</h3>
 
