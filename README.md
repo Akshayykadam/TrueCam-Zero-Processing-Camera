@@ -16,6 +16,16 @@
 
 **Iris** is a personal camera application built to capture the world **exactly as your sensor sees it**. No AI over-sharpening, no HDR ghosting, no "beauty" filters—just raw, high-resolution photography.
 
+## UI
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/a79feaf1-64d2-4ecc-86f2-f240ba85b86b" width="120" />
+  <img src="https://github.com/user-attachments/assets/5f061527-5b38-4147-b5b3-cac252247c98" width="120" />
+  <img src="https://github.com/user-attachments/assets/775fbb2a-bf09-4500-9e50-f2cf0837690f" width="120" />
+  <img src="https://github.com/user-attachments/assets/b3831c29-0aaf-4c4a-a65d-fe11dab37aff" width="120" />
+  <img src="https://github.com/user-attachments/assets/2d4072fd-32b9-401a-b3bc-ab281b933a95" width="120" />
+</p>
+
+
 ## ✨ Key Features
 
 ### 🚫 Zero Processing Philosophy
@@ -59,13 +69,6 @@ A clean, distraction-free UI designed for photographers.
 ## 🚀 Building from Source
 
 This project uses Gradle. 
-
-### Debug Build
-Great for testing and development.
-```bash
-./gradlew assembleDebug
-```
-📦 **Artifact**: `app/build/outputs/apk/stable/debug/app-stable-debug.apk`
 
 ### Release Build
 Optimized, minified, and signed (debug keys).
