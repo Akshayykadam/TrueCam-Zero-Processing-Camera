@@ -23,5 +23,9 @@ sealed interface CameraEvent {
     /**
      * Represents a focus metering event, that the camera can act on.
      */
-    data class FocusMeteringEvent(val x: Float, val y: Float) : CameraEvent
+    data class FocusMeteringEvent(val x: Float, val y: Float, val width: Float, val height: Float) : CameraEvent
+
+    data class SetExposureCompensation(val exposureIndex: Int) : CameraEvent
+
+    object ResetFocusAndMetering : CameraEvent
 }

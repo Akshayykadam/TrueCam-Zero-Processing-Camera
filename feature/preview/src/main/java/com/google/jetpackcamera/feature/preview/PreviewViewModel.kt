@@ -559,6 +559,24 @@ class PreviewViewModel @Inject constructor(
         }
     }
 
+    fun tapToFocus(x: Float, y: Float, width: Float, height: Float) {
+        viewModelScope.launch {
+            cameraSystem.tapToFocus(x, y, width, height)
+        }
+    }
+
+    fun setExposureCompensation(exposureIndex: Int) {
+        viewModelScope.launch {
+            cameraSystem.setExposureCompensation(exposureIndex)
+        }
+    }
+
+    fun resetFocusAndMetering() {
+        viewModelScope.launch {
+            cameraSystem.resetFocusAndMetering()
+        }
+    }
+
     fun setPhotoResolution(resolution: PhotoResolution) {
         viewModelScope.launch {
             cameraSystem.setPhotoResolution(resolution)
@@ -871,12 +889,7 @@ class PreviewViewModel @Inject constructor(
         }
     }
 
-    fun tapToFocus(x: Float, y: Float) {
-        Log.d(TAG, "tapToFocus")
-        viewModelScope.launch {
-            cameraSystem.tapToFocus(x, y)
-        }
-    }
+
 
     fun onSnackBarResult(cookie: String) {
         viewModelScope.launch {

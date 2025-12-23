@@ -242,7 +242,7 @@ internal suspend fun runSingleCameraSession(
                 ) { camera ->
                     Log.d(TAG, "Camera session started")
                     launch {
-                        processFocusMeteringEvents(
+                        processCameraEvents(
                             camera.cameraInfo,
                             camera.cameraControl
                         )
@@ -251,7 +251,10 @@ internal suspend fun runSingleCameraSession(
                     launch {
                         camera.cameraInfo.torchState.asFlow().collectLatest { torchState ->
                             currentCameraState.update { old ->
-                                old.copy(isTorchEnabled = torchState == TorchState.ON)
+                                old.copy(
+                                    isTorchEnabled = torchState == TorchState.ON,
+                                    exposureCompensationRange = camera.cameraInfo.exposureState.exposureCompensationRange
+                                )
                             }
                         }
                     }

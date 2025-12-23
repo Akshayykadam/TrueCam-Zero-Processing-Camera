@@ -16,6 +16,7 @@
 package com.google.jetpackcamera.core.camera
 
 import android.net.Uri
+import android.util.Range
 import com.google.jetpackcamera.model.LensFacing
 import com.google.jetpackcamera.model.LowLightBoostState
 import com.google.jetpackcamera.model.StabilizationMode
@@ -32,7 +33,9 @@ data class CameraState(
     val lowLightBoostState: LowLightBoostState = LowLightBoostState.Inactive,
     val debugInfo: DebugInfo = DebugInfo(null, null),
     val videoQualityInfo: VideoQualityInfo = VideoQualityInfo(VideoQuality.UNSPECIFIED, 0, 0),
-    val focusState: FocusState = FocusState.Unspecified
+    val focusState: FocusState = FocusState.Unspecified,
+    val exposureCompensationIndex: Int = 0,
+    val exposureCompensationRange: Range<Int> = Range(0, 0)
 )
 
 data class DebugInfo(val logicalCameraId: String?, val physicalCameraId: String?)
@@ -47,7 +50,8 @@ sealed interface FocusState {
     data class Specified(
         val x: Float,
         val y: Float,
-        val status: Status
+        val status: Status,
+        val isLocked: Boolean = true // Default to true for Tap-to-Lock
     ) : FocusState
 
     enum class Status {

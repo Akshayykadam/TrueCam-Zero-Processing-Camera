@@ -16,6 +16,7 @@
 package com.google.jetpackcamera.core.camera
 
 import android.content.ContentResolver
+import android.util.Range
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.SurfaceRequest
 import com.google.jetpackcamera.model.AspectRatio
@@ -98,6 +99,14 @@ interface CameraSystem {
 
     fun getCurrentSettings(): StateFlow<CameraAppSettings?>
 
+    suspend fun tapToFocus(x: Float, y: Float, width: Float, height: Float)
+
+    suspend fun setExposureCompensation(exposureIndex: Int)
+
+    suspend fun resetFocusAndMetering()
+
+    fun getExposureCompensationRange(): Range<Int>
+
     fun getCurrentPhotoResolution(): StateFlow<PhotoResolution>
 
     fun setFlashMode(flashMode: FlashMode)
@@ -114,7 +123,7 @@ interface CameraSystem {
 
     suspend fun setLensFacing(lensFacing: LensFacing)
 
-    suspend fun tapToFocus(x: Float, y: Float)
+
 
     suspend fun setStreamConfig(streamConfig: StreamConfig)
 

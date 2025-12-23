@@ -40,7 +40,8 @@
 
 ### 🎛️ Pro-Grade Controls
 A clean, distraction-free UI designed for photographers.
-- **Resolution Control**: Toggle between standard and maximum sensor resolution.
+- **Tap-to-Lock**: Tap anywhere to lock focus and exposure.
+- **Precision Exposure**: A slim, vertical slider allows for fine-tuned exposure compensation.
 - **Quick Settings**: Instant access to Flash, Timer (3s, 10s), Aspect Ratio, and Grid.
 - **Tactile Feel**: Subtle haptic feedback for a premium experience.
 

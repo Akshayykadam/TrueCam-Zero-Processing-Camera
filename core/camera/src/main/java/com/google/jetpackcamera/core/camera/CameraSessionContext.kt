@@ -38,7 +38,7 @@ internal data class CameraSessionContext(
     val backgroundDispatcher: CoroutineDispatcher,
     val screenFlashEvents: SendChannel<CameraSystem.ScreenFlashEvent>,
     val filePathGenerator: FilePathGenerator,
-    val focusMeteringEvents: Channel<CameraEvent.FocusMeteringEvent>,
+    val cameraEvents: Channel<CameraEvent>,
     val videoCaptureControlEvents: Channel<VideoCaptureControlEvent>,
     val currentCameraState: MutableStateFlow<CameraState>,
     val surfaceRequests: MutableStateFlow<SurfaceRequest?>,

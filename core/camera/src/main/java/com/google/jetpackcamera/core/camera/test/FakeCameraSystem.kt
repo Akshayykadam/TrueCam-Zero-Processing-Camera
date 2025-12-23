@@ -17,6 +17,7 @@ package com.google.jetpackcamera.core.camera.test
 
 import android.annotation.SuppressLint
 import android.content.ContentResolver
+import android.util.Range
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.SurfaceRequest
 import com.google.jetpackcamera.core.camera.CameraState
@@ -204,8 +205,20 @@ class FakeCameraSystem(defaultCameraSettings: CameraAppSettings = CameraAppSetti
         }
     }
 
-    override suspend fun tapToFocus(x: Float, y: Float) {
-        TODO("Not yet implemented")
+    override suspend fun tapToFocus(x: Float, y: Float, width: Float, height: Float) {
+        // no-op, just to satisfy interface for tests
+    }
+
+    override suspend fun setExposureCompensation(exposureIndex: Int) {
+        // no-op
+    }
+
+    override suspend fun resetFocusAndMetering() {
+        // no-op
+    }
+
+    override fun getExposureCompensationRange(): Range<Int> {
+        return Range(-10, 10)
     }
 
     override suspend fun setStreamConfig(streamConfig: StreamConfig) {

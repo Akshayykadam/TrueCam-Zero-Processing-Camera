@@ -22,6 +22,7 @@ import android.util.Log
 import androidx.camera.compose.CameraXViewfinder
 import androidx.camera.core.DynamicRange as CXDynamicRange
 import androidx.camera.core.SurfaceRequest
+
 import androidx.camera.viewfinder.compose.CoordinateTransformer
 import androidx.camera.viewfinder.compose.MutableCoordinateTransformer
 import androidx.camera.viewfinder.core.ImplementationMode
@@ -53,6 +54,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -79,6 +81,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -92,6 +98,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -401,9 +408,11 @@ fun DetectWindowColorModeChanges(
 @Composable
 fun PreviewDisplay(
     previewDisplayUiState: PreviewDisplayUiState,
-    onTapToFocus: (x: Float, y: Float) -> Unit,
+    onTapToFocus: (x: Float, y: Float, width: Float, height: Float) -> Unit,
     onFlipCamera: () -> Unit,
     onScaleZoom: (Float) -> Unit,
+    onSetExposureCompensation: (Int) -> Unit,
+    onResetFocusAndMetering: () -> Unit,
     onRequestWindowColorMode: (Int) -> Unit,
     surfaceRequest: SurfaceRequest?,
     focusMeteringUiState: FocusMeteringUiState,
@@ -435,6 +444,7 @@ fun PreviewDisplay(
             val shouldUseMaxWidth = maxAspectRatio <= aspectRatioFloat
             val width = if (shouldUseMaxWidth) maxWidth else maxHeight * aspectRatioFloat
             val height = if (!shouldUseMaxWidth) maxHeight else maxWidth / aspectRatioFloat
+            val boxConstraints = constraints
             var imageVisible by remember { mutableStateOf(true) }
 
             val imageAlpha: Float by animateFloatAsState(
@@ -492,7 +502,12 @@ fun PreviewDisplay(
                                             "onTapToFocus: " +
                                                 "input{$it} -> surface{$surfaceCoords}"
                                         )
-                                        onTapToFocus(surfaceCoords.x, surfaceCoords.y)
+                                        onTapToFocus(
+                                            surfaceCoords.x, 
+                                            surfaceCoords.y,
+                                            boxConstraints.maxWidth.toFloat(),
+                                            boxConstraints.maxHeight.toFloat()
+                                        )
                                     }
                                 }
                             )
@@ -501,10 +516,31 @@ fun PreviewDisplay(
                     implementationMode = implementationMode,
                     coordinateTransformer = coordinateTransformer
                 )
+                
                 FocusMeteringIndicator(
                     focusMeteringUiState = focusMeteringUiState,
-                    coordinateTransformer = coordinateTransformer
+                    coordinateTransformer = coordinateTransformer,
+                    onReset = onResetFocusAndMetering
                 )
+
+                // Exposure Slider
+                if (focusMeteringUiState is FocusMeteringUiState.Specified && focusMeteringUiState.isLocked) {
+                    val range = focusMeteringUiState.exposureCompensationRange
+                    if (range.lower != 0 || range.upper != 0) {
+                        VerticalExposureSlider(
+                            value = focusMeteringUiState.exposureCompensationIndex.toFloat(),
+                            onValueChange = { value ->
+                                onSetExposureCompensation(value.toInt())
+                            },
+                            valueRange = range.lower.toFloat()..range.upper.toFloat(),
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp) // Slight padding from edge
+                                .width(30.dp)      // Slim touch area
+                                .height(220.dp)    // Reasonable vertical travel
+                        )
+                    }
+                }
             }
         }
     }
@@ -735,7 +771,8 @@ fun FlipCameraButton(
 @Composable
 fun FocusMeteringIndicator(
     focusMeteringUiState: FocusMeteringUiState,
-    coordinateTransformer: CoordinateTransformer
+    coordinateTransformer: CoordinateTransformer,
+    onReset: () -> Unit = {}
 ) {
     if (focusMeteringUiState is FocusMeteringUiState.Specified) {
         val transition = rememberInfiniteTransition(label = "FocusPulse")
@@ -749,35 +786,43 @@ fun FocusMeteringIndicator(
             label = "FocusPulseAlpha"
         )
 
-        // The indicator for SUCCESS/FAILURE is shown for a short duration
+        // The indicator for SUCCESS/FAILURE is shown for a short duration if NOT locked
         var showResultIndicator by remember { mutableStateOf(false) }
         val status = focusMeteringUiState.status
-        LaunchedEffect(status) {
-            if (status == FocusMeteringUiState.Status.SUCCESS ||
-                status == FocusMeteringUiState.Status.FAILURE
+        val isLocked = focusMeteringUiState.isLocked
+
+        LaunchedEffect(status, isLocked) {
+            if (!isLocked && (status == FocusMeteringUiState.Status.SUCCESS ||
+                status == FocusMeteringUiState.Status.FAILURE)
             ) {
                 showResultIndicator = true
                 delay(FOCUS_INDICATOR_RESULT_DELAY)
                 showResultIndicator = false
             } else {
-                showResultIndicator = false
+                showResultIndicator = true // Always show if locked or running
             }
         }
+        
         // Map coordinates from surface coordinates back to screen coordinates
         val tapCoords =
             remember(
                 coordinateTransformer.transformMatrix,
-                focusMeteringUiState.surfaceCoordinates
+                focusMeteringUiState.x,
+                focusMeteringUiState.y
             ) {
                 Matrix().run {
                     setFrom(coordinateTransformer.transformMatrix)
                     invert()
-                    map(focusMeteringUiState.surfaceCoordinates)
+                    map(Offset(focusMeteringUiState.x, focusMeteringUiState.y))
                 }
             }
-        val showFocusMeteringIndicator = status == FocusMeteringUiState.Status.RUNNING
+            
+        val isVisible = status == FocusMeteringUiState.Status.RUNNING || 
+                        (status == FocusMeteringUiState.Status.SUCCESS && isLocked) ||
+                        showResultIndicator
+
         AnimatedVisibility(
-            visible = showFocusMeteringIndicator || showResultIndicator,
+            visible = isVisible,
             enter = fadeIn() + scaleIn(initialScale = 1.5f),
             exit = fadeOut() + when (focusMeteringUiState.status) {
                 FocusMeteringUiState.Status.SUCCESS -> scaleOut(targetScale = 0.5f)
@@ -792,6 +837,12 @@ fun FocusMeteringIndicator(
             Box(
                 Modifier
                     .testTag(FOCUS_METERING_INDICATOR_TAG)
+                    .size(TAP_TO_FOCUS_INDICATOR_SIZE)
+                    .border(
+                        width = 2.dp,
+                        color = if (isLocked) Color.Yellow else Color.White,
+                        shape = CircleShape
+                    )
                     .alpha(
                         if (focusMeteringUiState.status == FocusMeteringUiState.Status.SUCCESS) {
                             1f
@@ -799,13 +850,118 @@ fun FocusMeteringIndicator(
                             alpha
                         }
                     )
-                    .border(
-                        1.dp,
-                        Color.White,
-                        CircleShape
-                    )
-                    .size(TAP_TO_FOCUS_INDICATOR_SIZE)
             )
         }
     }
 }
+
+@Composable
+fun VerticalExposureSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier
+) {
+    var internalValue by remember { mutableStateOf<Float?>(null) }
+    val currentValue = internalValue ?: value
+
+    // Sync logic: Clear internalValue only when backend value catches up
+    LaunchedEffect(value, internalValue) {
+        internalValue?.let { internal ->
+            if (kotlin.math.round(internal) == value) {
+                internalValue = null
+            }
+        }
+    }
+    
+    LaunchedEffect(internalValue) {
+        if (internalValue != null) {
+            kotlinx.coroutines.delay(2000)
+            internalValue = null
+        }
+    }
+
+    val rangeDelta = valueRange.endInclusive - valueRange.start
+    val progress = if (rangeDelta == 0f) 0f else (currentValue - valueRange.start) / rangeDelta
+
+    BoxWithConstraints(modifier = modifier) {
+        val maxHeight = constraints.maxHeight.toFloat()
+        // Capture active color from composition locals
+        val activeColor = androidx.compose.material3.MaterialTheme.colorScheme.primary
+
+        fun updateValue(y: Float) {
+            val clampedY = y.coerceIn(0f, maxHeight)
+            val fraction = 1f - (clampedY / maxHeight)
+            val newValue = valueRange.start + (fraction * rangeDelta)
+            internalValue = newValue
+            onValueChange(newValue)
+        }
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = { offset ->
+                            updateValue(offset.y)
+                            tryAwaitRelease()
+                            // On tap release, let sync logic handle clearing
+                        }
+                    ) 
+                }
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragStart = { offset ->
+                           updateValue(offset.y)
+                        },
+                        onDragEnd = {
+                           // Wait for sync
+                        },
+                        onDragCancel = {
+                           // Wait for sync
+                        }
+                    ) { change, _ ->
+                        updateValue(change.position.y)
+                    }
+                }
+        ) {
+            val trackColor = Color.White.copy(alpha = 0.5f)
+            val thumbRadius = 6.dp.toPx()
+            val strokeWidth = 2.dp.toPx()
+            val centerX = size.width / 2
+
+            // Track
+            drawLine(
+                color = trackColor,
+                start = Offset(centerX, 0f),
+                end = Offset(centerX, size.height),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round
+            )
+
+            // Zero Marker
+            if (valueRange.start <= 0f && valueRange.endInclusive >= 0f) {
+                val zeroFraction = (0f - valueRange.start) / rangeDelta
+                val zeroY = size.height * (1 - zeroFraction)
+                val thumbY = size.height * (1 - progress)
+                
+                drawLine(
+                    color = activeColor,
+                    start = Offset(centerX, zeroY),
+                    end = Offset(centerX, thumbY),
+                    strokeWidth = strokeWidth,
+                    cap = StrokeCap.Round
+                )
+            }
+
+            // Thumb
+            val thumbY = size.height * (1 - progress)
+            drawCircle(
+                color = activeColor,
+                radius = thumbRadius,
+                center = Offset(centerX, thumbY)
+            )
+        }
+    }
+}
+

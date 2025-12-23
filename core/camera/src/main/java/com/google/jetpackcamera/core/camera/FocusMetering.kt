@@ -40,7 +40,7 @@ private const val TAG = "FocusMetering"
 private const val AUTO_FOCUS_TIMEOUT_MILLIS = 2500L
 
 @OptIn(ExperimentalCoroutinesApi::class)
-internal suspend fun CameraSessionContext.processFocusMeteringEvents(
+internal suspend fun CameraSessionContext.processCameraEvents(
     cameraInfo: CameraInfo,
     cameraControl: CameraControl
 ) {
@@ -48,7 +48,7 @@ internal suspend fun CameraSessionContext.processFocusMeteringEvents(
         surfaceRequest?.let { request ->
             Log.d(
                 TAG,
-                "Waiting to process focus points for surface with resolution: " +
+                "Waiting to process camera events for surface with resolution: " +
                     "${request.resolution.width} x ${request.resolution.height}"
             )
 
@@ -62,7 +62,7 @@ internal suspend fun CameraSessionContext.processFocusMeteringEvents(
                 }
         } ?: flowOf(null)
     }.collectLatest { meteringPointFactory ->
-        focusMeteringEvents
+        cameraEvents
             .receiveAsFlow()
             .onCompletion {
                 currentCameraState.update { old ->
@@ -70,42 +70,78 @@ internal suspend fun CameraSessionContext.processFocusMeteringEvents(
                 }
             }
             .collectLatest { event ->
-                meteringPointFactory?.apply {
-                    Log.d(TAG, "tapToFocus, processing event: $event")
+                when (event) {
+                    is CameraEvent.FocusMeteringEvent -> {
+                        meteringPointFactory?.apply {
+                            Log.d(TAG, "tapToFocus, processing event: $event")
 
-                    fun updateFocusState(status: FocusState.Status) {
-                        currentCameraState.update { old ->
-                            old.copy(
-                                focusState = FocusState.Specified(
-                                    x = event.x,
-                                    y = event.y,
-                                    status = status
-                                )
+                            fun updateFocusState(status: FocusState.Status) {
+                                currentCameraState.update { old ->
+                                    old.copy(
+                                        focusState = FocusState.Specified(
+                                            x = event.x,
+                                            y = event.y,
+                                            status = status
+                                        )
+                                    )
+                                }
+                            }
+
+                            updateFocusState(FocusState.Status.RUNNING)
+                            val meteringPoint = createPoint(event.x, event.y)
+                            val action = FocusMeteringAction.Builder(meteringPoint)
+                                .disableAutoCancel() // Lock focus and exposure
+                                .build()
+                            
+                            val completionStatus: FocusState.Status = try {
+                                if (cameraControl.startFocusAndMetering(action).await().isFocusSuccessful) {
+                                    FocusState.Status.SUCCESS
+                                } else {
+                                    FocusState.Status.FAILURE
+                                }
+                            } catch (_: CameraControl.OperationCanceledException) {
+                                FocusState.Status.FAILURE
+                            }
+
+                            Log.d(
+                                TAG,
+                                "tapToFocus, finished processing event: $event. Result: $completionStatus"
                             )
+
+                            // Don't revert directly to unspecified if we want to show "Locked" state
+                            updateFocusState(completionStatus)
                         }
                     }
 
-                    updateFocusState(FocusState.Status.RUNNING)
-                    val meteringPoint = createPoint(event.x, event.y)
-                    val action = FocusMeteringAction.Builder(meteringPoint)
-                        .setAutoCancelDuration(AUTO_FOCUS_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-                        .build()
-                    val completionStatus: FocusState.Status = try {
-                        if (cameraControl.startFocusAndMetering(action).await().isFocusSuccessful) {
-                            FocusState.Status.SUCCESS
-                        } else {
-                            FocusState.Status.FAILURE
+                    is CameraEvent.SetExposureCompensation -> {
+                        try {
+                            cameraControl.setExposureCompensationIndex(event.exposureIndex).await()
+                            Log.d(TAG, "Exposure compensation set to: ${event.exposureIndex}")
+                            currentCameraState.update { old ->
+                                old.copy(exposureCompensationIndex = event.exposureIndex)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to set exposure compensation", e)
                         }
-                    } catch (_: CameraControl.OperationCanceledException) {
-                        FocusState.Status.FAILURE
                     }
 
-                    Log.d(
-                        TAG,
-                        "tapToFocus, finished processing event: $event. Result: $completionStatus"
-                    )
-
-                    updateFocusState(completionStatus)
+                    is CameraEvent.ResetFocusAndMetering -> {
+                        try {
+                            cameraControl.cancelFocusAndMetering().await()
+                            // Also reset exposure compensation
+                            cameraControl.setExposureCompensationIndex(0).await()
+                            
+                            currentCameraState.update { old ->
+                                old.copy(
+                                    focusState = FocusState.Unspecified,
+                                    exposureCompensationIndex = 0
+                                )
+                            }
+                            Log.d(TAG, "Reset focus and metering")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to reset focus and metering", e)
+                        }
+                    }
                 }
             }
     }

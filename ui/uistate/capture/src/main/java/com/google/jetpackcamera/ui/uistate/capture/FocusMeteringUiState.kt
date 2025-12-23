@@ -14,27 +14,74 @@
  * limitations under the License.
  */
 package com.google.jetpackcamera.ui.uistate.capture
+import android.util.Range
+import com.google.jetpackcamera.core.camera.CameraState
+import com.google.jetpackcamera.core.camera.FocusState
 
-import androidx.compose.ui.geometry.Offset
-
-/**
- * Represents the UI state of a focus metering/autofocus event
- */
 sealed interface FocusMeteringUiState {
-
-    data object Unspecified : FocusMeteringUiState
-
-    data class Specified(
-        val surfaceCoordinates: Offset,
-        val status: Status
-    ) : FocusMeteringUiState
+    val x: Float
+    val y: Float
+    val isFocused: Boolean
+    val isLocked: Boolean
+    val exposureCompensationIndex: Int
+    val exposureCompensationRange: Range<Int>
+    val status: Status
 
     enum class Status {
         RUNNING,
         SUCCESS,
         FAILURE,
-        CANCELLED
+        UNSPECIFIED
     }
 
-    companion object
+    data class Specified(
+        override val x: Float,
+        override val y: Float,
+        override val isFocused: Boolean,
+        override val isLocked: Boolean,
+        override val exposureCompensationIndex: Int,
+        override val exposureCompensationRange: Range<Int>,
+        override val status: Status
+    ) : FocusMeteringUiState
+
+    data object Unspecified : FocusMeteringUiState {
+        override val x: Float = 0f
+        override val y: Float = 0f
+        override val isFocused: Boolean = false
+        override val isLocked: Boolean = false
+        override val exposureCompensationIndex: Int = 0
+        override val exposureCompensationRange: Range<Int> = Range(0, 0)
+        override val status: Status = Status.UNSPECIFIED
+    }
+
+    companion object {
+        fun from(cameraState: CameraState): FocusMeteringUiState {
+            val focusState = cameraState.focusState
+            return when (focusState) {
+                is FocusState.Specified -> {
+                    Specified(
+                        x = focusState.x,
+                        y = focusState.y,
+                        isFocused = focusState.status == FocusState.Status.SUCCESS,
+                        isLocked = focusState.isLocked,
+                        exposureCompensationIndex = cameraState.exposureCompensationIndex,
+                        exposureCompensationRange = cameraState.exposureCompensationRange,
+                        status = when (focusState.status) {
+                            FocusState.Status.RUNNING -> Status.RUNNING
+                            FocusState.Status.SUCCESS -> Status.SUCCESS
+                            FocusState.Status.FAILURE -> Status.FAILURE
+                            FocusState.Status.CANCELLED -> Status.FAILURE
+                        }
+                    )
+                }
+
+                else -> Unspecified
+            }
+        }
+    }
+
+    fun updateFrom(cameraState: CameraState): FocusMeteringUiState {
+        return from(cameraState)
+    }
 }
+

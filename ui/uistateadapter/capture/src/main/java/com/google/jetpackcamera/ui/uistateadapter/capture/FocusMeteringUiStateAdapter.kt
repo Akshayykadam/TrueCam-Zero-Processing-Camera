@@ -21,44 +21,5 @@ import com.google.jetpackcamera.core.camera.FocusState
 import com.google.jetpackcamera.ui.uistate.capture.FocusMeteringUiState
 
 fun FocusMeteringUiState.updateFrom(cameraState: CameraState): FocusMeteringUiState {
-    val focusState = cameraState.focusState
-    return when (this) {
-        is FocusMeteringUiState.Unspecified -> {
-            if (focusState is FocusState.Unspecified) {
-                this
-            } else {
-                FocusMeteringUiState.from(cameraState)
-            }
-        }
-
-        is FocusMeteringUiState.Specified -> {
-            if (focusState is FocusState.Specified &&
-                this.surfaceCoordinates.x == focusState.x &&
-                this.surfaceCoordinates.y == focusState.y &&
-                this.status.name == focusState.status.name
-            ) {
-                this
-            } else {
-                FocusMeteringUiState.from(cameraState)
-            }
-        }
-    }
-}
-
-fun FocusMeteringUiState.Companion.from(cameraState: CameraState): FocusMeteringUiState {
-    return when (val focusState = cameraState.focusState) {
-        is FocusState.Unspecified -> FocusMeteringUiState.Unspecified
-        is FocusState.Specified -> {
-            val status = when (focusState.status) {
-                FocusState.Status.RUNNING -> FocusMeteringUiState.Status.RUNNING
-                FocusState.Status.SUCCESS -> FocusMeteringUiState.Status.SUCCESS
-                FocusState.Status.FAILURE -> FocusMeteringUiState.Status.FAILURE
-                FocusState.Status.CANCELLED -> FocusMeteringUiState.Status.CANCELLED
-            }
-            FocusMeteringUiState.Specified(
-                surfaceCoordinates = Offset(focusState.x, focusState.y),
-                status = status
-            )
-        }
-    }
+    return FocusMeteringUiState.from(cameraState)
 }

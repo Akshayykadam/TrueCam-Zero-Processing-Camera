@@ -113,7 +113,7 @@ internal suspend fun runConcurrentCameraSession(
         }
 
         launch {
-            processFocusMeteringEvents(
+            processCameraEvents(
                 primaryCamera.cameraInfo,
                 primaryCamera.cameraControl
             )
