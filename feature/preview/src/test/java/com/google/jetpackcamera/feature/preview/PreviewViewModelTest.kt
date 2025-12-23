@@ -32,10 +32,12 @@ import com.google.jetpackcamera.ui.uistate.capture.FlashModeUiState
 import com.google.jetpackcamera.ui.uistate.capture.FlipLensUiState
 import com.google.jetpackcamera.ui.uistate.capture.compound.CaptureUiState
 import com.google.jetpackcamera.ui.uistate.capture.compound.QuickSettingsUiState
+import com.google.jetpackcamera.ui.components.capture.quicksettings.TimerMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -97,7 +99,8 @@ class PreviewViewModelTest {
         startCameraUntilRunning()
         previewViewModel.startVideoRecording()
         advanceUntilIdle()
-        assertThat(cameraSystem.recordingInProgress).isTrue()
+        // Photo Only: Should NOT start recording
+        assertThat(cameraSystem.recordingInProgress).isFalse()
     }
 
     @Test
@@ -178,6 +181,33 @@ class PreviewViewModelTest {
     private fun TestScope.startCameraUntilRunning() {
         previewViewModel.startCamera()
         advanceUntilIdle()
+    }
+    @Test
+    fun captureImageWithTimer() = runTest(StandardTestDispatcher()) {
+        val contentResolver: ContentResolver =
+            ApplicationProvider.getApplicationContext<Context>().contentResolver
+        startCameraUntilRunning()
+        
+        previewViewModel.captureImage(contentResolver, TimerMode.THREE_SEC)
+        
+        // Should update countdown
+        advanceTimeBy(100)
+        assertIsReady(previewViewModel.captureUiState.value).also {
+            assertThat(it.countdownSeconds).isEqualTo(3)
+        }
+        
+        advanceTimeBy(1000)
+        assertIsReady(previewViewModel.captureUiState.value).also {
+            assertThat(it.countdownSeconds).isEqualTo(2)
+        }
+
+        advanceUntilIdle() // Finish timer
+        assertThat(cameraSystem.numPicturesTaken).isEqualTo(1)
+        
+        // Countdown should be reset
+        assertIsReady(previewViewModel.captureUiState.value).also {
+            assertThat(it.countdownSeconds).isNull()
+        }
     }
 }
 

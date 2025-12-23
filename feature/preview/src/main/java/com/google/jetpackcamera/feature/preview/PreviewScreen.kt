@@ -63,6 +63,7 @@ import com.google.jetpackcamera.model.PhotoResolution
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.tracing.Trace
@@ -119,7 +120,7 @@ import com.google.jetpackcamera.ui.components.capture.quicksettings.FlashSetting
 import com.google.jetpackcamera.ui.components.capture.quicksettings.TimerMode
 import com.google.jetpackcamera.ui.components.capture.quicksettings.FpsMode
 import com.google.jetpackcamera.ui.components.capture.quicksettings.VideoResolutionMode
-import com.google.jetpackcamera.ui.components.capture.quicksettings.ImageProcessingMode
+
 import com.google.jetpackcamera.ui.components.capture.quicksettings.AspectRatioMode
 import com.google.jetpackcamera.model.VideoQuality
 import com.google.jetpackcamera.ui.components.capture.quicksettings.ui.FlashModeIndicator
@@ -409,7 +410,7 @@ private fun ContentScreen(
     onToggleDebugHidingComponents: () -> Unit = {},
     onSetPause: (Boolean) -> Unit = {},
     onSetAudioEnabled: (Boolean) -> Unit = {},
-    onCaptureImage: (ContentResolver) -> Unit = {},
+    onCaptureImage: (ContentResolver, TimerMode) -> Unit = { _, _ -> },
     onStartVideoRecording: () -> Unit = {},
     onStopVideoRecording: () -> Unit = {},
     onLockVideoRecording: (Boolean) -> Unit = {},
@@ -440,29 +441,10 @@ private fun ContentScreen(
     // Shared UI state for settings and grid
     var isGridEnabled by remember { mutableStateOf(false) }
     var selectedUiMode by remember { mutableStateOf(CameraMode.PHOTO) }
-    var currentImageProcessingMode by remember { mutableStateOf(ImageProcessingMode.JPEG) }
+
     var currentTimerMode by remember { mutableStateOf(TimerMode.OFF) }
 
-    // Derive FPS from Persistence
-    val currentFpsMode = if (captureUiState.quickSettingsUiState is QuickSettingsUiState.Available) {
-         val fps = (captureUiState.quickSettingsUiState as QuickSettingsUiState.Available).targetFrameRate
-         when(fps) {
-             24 -> FpsMode.FPS_24
-             30 -> FpsMode.FPS_30
-             60 -> FpsMode.FPS_60
-             else -> FpsMode.FPS_30
-         }
-    } else {
-        FpsMode.FPS_30
-    }
 
-    val currentVideoResolution = when (captureUiState.videoQuality) {
-         VideoQuality.SD -> VideoResolutionMode.HD // fallback
-         VideoQuality.HD -> VideoResolutionMode.HD
-         VideoQuality.FHD -> VideoResolutionMode.FHD
-         VideoQuality.UHD -> VideoResolutionMode.UHD
-         else -> VideoResolutionMode.FHD
-    }
 
     val currentAspectRatio = if (captureUiState.quickSettingsUiState is QuickSettingsUiState.Available) {
          val aspectState = (captureUiState.quickSettingsUiState as QuickSettingsUiState.Available).aspectRatioUiState
@@ -471,7 +453,8 @@ private fun ContentScreen(
         AspectRatio.THREE_FOUR
     }
 
-    LayoutWrapper(
+    Box(modifier = Modifier.fillMaxSize()) {
+        LayoutWrapper(
         modifier = modifier,
         currentAspectRatio = currentAspectRatio,
         isGridEnabled = isGridEnabled,  // Pass grid state
@@ -538,21 +521,16 @@ private fun ContentScreen(
                     )?.quickSettingsIsOpen ?: false,
                 onCaptureImage = {
                     runCaptureAction {
-                        onCaptureImage(it)
+                        onCaptureImage(it, currentTimerMode)
                     }
                 },
                 onIncrementZoom = { targetZoom ->
                     onIncrementZoom(targetZoom, LensToZoom.PRIMARY)
                 },
                 onToggleQuickSettings = onToggleQuickSettings,
-                onStartVideoRecording = {
-                    runCaptureAction {
-                        onStartVideoRecording()
-                    }
-                },
-                onStopVideoRecording =
-                onStopVideoRecording,
-                onLockVideoRecording = onLockVideoRecording
+                onStartVideoRecording = {},
+                onStopVideoRecording = {},
+                onLockVideoRecording = {}
             )
         },
         flipCameraButton = {
@@ -596,18 +574,7 @@ private fun ContentScreen(
                 )
             }
         },
-        elapsedTimeDisplay = {
-            AnimatedVisibility(
-                visible = (captureUiState.videoRecordingState is VideoRecordingState.Active),
-                enter = fadeIn(),
-                exit = fadeOut(animationSpec = tween(delayMillis = 1_500))
-            ) {
-                ElapsedTimeText(
-                    modifier = Modifier.testTag(ELAPSED_TIME_TAG),
-                    elapsedTimeUiState = captureUiState.elapsedTimeUiState
-                )
-            }
-        },
+                elapsedTimeDisplay = {},
         quickSettingsButton = {
             AnimatedVisibility(
                 visible = (captureUiState.videoRecordingState !is VideoRecordingState.Active),
@@ -632,45 +599,7 @@ private fun ContentScreen(
             )
         },
         captureModeToggle = {
-            // Uses shared selectedUiMode from ContentScreen level
-            // Sync with capture mode changes from external sources
-            val currentCaptureMode = when (captureUiState.captureButtonUiState) {
-                is CaptureButtonUiState.Enabled.Idle -> {
-                    (captureUiState.captureButtonUiState as CaptureButtonUiState.Enabled.Idle).captureMode
-                }
-                else -> CaptureMode.STANDARD
-            }
-            
-            // If capture mode changed externally (e.g. from settings), update UI mode
-            LaunchedEffect(currentCaptureMode) {
-                if (currentCaptureMode == CaptureMode.VIDEO_ONLY && selectedUiMode != CameraMode.VIDEO) {
-                    selectedUiMode = CameraMode.VIDEO
-                } else if (currentCaptureMode == CaptureMode.IMAGE_ONLY && selectedUiMode == CameraMode.VIDEO) {
-                    selectedUiMode = CameraMode.PHOTO
-                }
-            }
-            
-            ModeSelector(
-                modes = listOf(
-                    CameraMode.PHOTO,   // Standard Photo
-                    CameraMode.VIDEO    // Video
-                ),
-                selectedMode = selectedUiMode,  // Use UI mode, not capture mode
-                onModeSelected = { mode ->
-                    selectedUiMode = mode  // Update UI mode
-                    when (mode) {
-                        CameraMode.PHOTO -> onSetCaptureMode(CaptureMode.IMAGE_ONLY)
-                        CameraMode.VIDEO -> onSetCaptureMode(CaptureMode.VIDEO_ONLY)
-                        CameraMode.ZERO -> onSetCaptureMode(CaptureMode.IMAGE_ONLY) // Zero uses photo mode with minimal processing
-                        CameraMode.NIGHT -> {
-                            onSetCaptureMode(CaptureMode.IMAGE_ONLY)
-                            // Also enable low light boost flash
-                            onChangeFlash(FlashMode.LOW_LIGHT_BOOST)
-                        }
-                    }
-                },
-                modifier = it
-            )
+             // Photo Only Mode - No Selector needed
         },
         quickSettingsOverlay = {
             // Map FlashMode to FlashSettingMode
@@ -710,10 +639,7 @@ private fun ContentScreen(
                 else -> AspectRatioMode.RATIO_4_3
             }
 
-            // Derive Photo Resolution
-            val currentPhotoResolution = (captureUiState.quickSettingsUiState as? QuickSettingsUiState.Available)
-                ?.photoResolution
-                ?: PhotoResolution.STANDARD
+
 
             val isQuickSettingsOpen = (captureUiState.quickSettingsUiState as? QuickSettingsUiState.Available)?.quickSettingsIsOpen == true
             val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -733,7 +659,6 @@ private fun ContentScreen(
                     sheetState = sheetState,
                     onDismiss = onToggleQuickSettings,
                     onNavigateToSettings = onNavigateToSettings,
-                    isVideoMode = isVideoMode,
                     currentFlashMode = currentFlashMode,
                     onFlashModeChanged = { flashSettingMode ->
                         val mappedFlashMode = when (flashSettingMode) {
@@ -744,8 +669,7 @@ private fun ContentScreen(
                         }
                         onChangeFlash(mappedFlashMode)
                     },
-                    currentImageProcessingMode = currentImageProcessingMode,
-                    onImageProcessingModeChanged = { currentImageProcessingMode = it },
+
                     currentTimerMode = currentTimerMode,
                     onTimerModeChanged = { currentTimerMode = it },
                     currentAspectRatio = currentAspectRatio,
@@ -756,26 +680,6 @@ private fun ContentScreen(
                         }
                         onChangeAspectRatio(mappedAspectRatio)
                     },
-                    currentFpsMode = currentFpsMode,
-                    onFpsModeChanged = { fpsMode ->
-                        val targetFps = when (fpsMode) {
-                            FpsMode.FPS_24 -> 24
-                            FpsMode.FPS_30 -> 30
-                            FpsMode.FPS_60 -> 60
-                        }
-                        onChangeTargetFrameRate(targetFps)
-                    },
-                    currentVideoResolution = currentVideoResolution,
-                    onVideoResolutionChanged = { resolutionMode ->
-                        val targetQuality = when (resolutionMode) {
-                              VideoResolutionMode.HD -> VideoQuality.HD
-                              VideoResolutionMode.FHD -> VideoQuality.FHD
-                              VideoResolutionMode.UHD -> VideoQuality.UHD
-                        }
-                        onChangeVideoQuality(targetQuality)
-                    },
-                    currentPhotoResolution = currentPhotoResolution,
-                    onPhotoResolutionChanged = onChangePhotoResolution,
                     isGridEnabled = isGridEnabled,
                     onGridToggled = { isGridEnabled = it }
                 )
@@ -855,6 +759,24 @@ private fun ContentScreen(
             }
         }
     )
+        
+        // Countdown Overlay
+        if (captureUiState.countdownSeconds != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = captureUiState.countdownSeconds.toString(),
+                    style = MaterialTheme.typography.displayLarge,
+                    color = Color.White,
+                    fontSize = 120.sp
+                )
+            }
+        }
+    }
 }
 
 @Composable

@@ -96,7 +96,7 @@ fun SettingsScreen(
         permissions =
         listOf(
             Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO,
+            // Manifest.permission.RECORD_AUDIO, // Removed for Photo-only mode
             Manifest.permission.READ_EXTERNAL_STORAGE
         )
     )
@@ -190,27 +190,7 @@ fun SettingsList(
     // Hidden - available in quick settings on home screen:
     // FlashModeSetting, TargetFpsSetting, AspectRatioSetting, StreamConfigSetting, LowLightBoostPrioritySetting
 
-    SectionHeader(title = stringResource(R.string.section_title_recording_settings))
-
-    RecordingAudioSetting(
-        audioUiState = uiState.audioUiState,
-        setDefaultAudio = setAudio
-    )
-
-    MaxVideoDurationSetting(
-        maxVideoDurationUiState = uiState.maxVideoDurationUiState,
-        setMaxDuration = setMaxVideoDuration
-    )
-
-    StabilizationSetting(
-        stabilizationUiState = uiState.stabilizationUiState,
-        setStabilizationMode = setStabilizationMode
-    )
-
-    VideoQualitySetting(
-        videQualityUiState = uiState.videoQualityUiState,
-        setVideoQuality = setVideoQuality
-    )
+    // Video Recording Settings removed for Photo-only mode
 
     SectionHeader(title = stringResource(id = R.string.section_title_app_settings))
 

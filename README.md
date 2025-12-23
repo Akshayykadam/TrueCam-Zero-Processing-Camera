@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/9295d37f-b4bb-4740-9e86-d41754fb7a9b" width="120" alt="Iris Logo"/>
-  <h1>Iris Camera</h1>
-  <h3>Pure Photography. Zero Processing.</h3>
+  <img src="https://github.com/user-attachments/assets/9295d37f-b4bb-4740-9e86-d41754fb7a9b" width="120" alt="TrueCam Logo"/>
+  <h1>TrueCam</h1>
+  <h3>Pure Photography. Photo Only. Zero Processing.</h3>
 
   [![Kotlin](https://img.shields.io/badge/Kotlin-1.9-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
   [![Compose](https://img.shields.io/badge/Compose-Material3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
@@ -14,7 +14,7 @@
 
 ---
 
-**Iris** is a personal camera application built to capture the world **exactly as your sensor sees it**. No AI over-sharpening, no HDR ghosting, no "beauty" filters—just raw, high-resolution photography.
+**TrueCam** is a dedicated camera application built to capture the world **exactly as your sensor sees it**. No AI over-sharpening, no HDR ghosting, no "beauty" filters—just raw, high-resolution photography. We stripped away video recording to focus entirely on the art of the still image.
 
 ## UI
 <p align="center">
@@ -28,30 +28,25 @@
 
 ## ✨ Key Features
 
-### 🚫 Zero Processing Philosophy
-> _"What you see is what you get."_
-Bypass modern smartphone post-processing algorithms.
+### 📸 Photo Only Focus
+> _"Stillness in motion."_
+- **Zero Video Distractions**: All video recording logic, permissions, and UI have been removed.
+- **Dedicated Shutter**: A single, responsive button for instant capture.
+
+### 🚫 Zero Processing
 - **Pure Capture**: Get the raw pixel data your sensor sees.
 - **Natural Detail**: Preserve grain and texture often lost to noise reduction.
 - **True-to-Life Colors**: Authentic color reproduction without saturation boosting.
 
-### 🌟 High Resolution
-Unlock the full potential of your hardware.
-- **Max Resolution**: Aggressively targets specific maximum resolutions (e.g., 50MP, 200MP), bypassing standard binning.
-- **Resolution Selector**: 
-  - `Standard` (12MP)
-  - `Medium` (24MP)
-  - `Max` (Sensor Limit)
-
 ### 🎛️ Pro-Grade Controls
 A clean, distraction-free UI designed for photographers.
-- **Smart Zoom**: Dedicated **10x** button (rear) and specialized **2x limit** (front).
-- **Video Controls**: 24/30/60 FPS selection up to 4K.
-- **Quick Settings**: Instant access to Flash, Timer, and Grid.
+- **Resolution Control**: Toggle between standard and maximum sensor resolution.
+- **Quick Settings**: Instant access to Flash, Timer (3s, 10s), Aspect Ratio, and Grid.
 - **Tactile Feel**: Subtle haptic feedback for a premium experience.
 
 ### 🔒 Privacy First
 - **Offline Only**: No internet permissions required.
+- **No Mic Permission**: Since video is removed, we don't even ask for your microphone.
 - **Local Storage**: Your photos stay strictly on your device.
 
 ---

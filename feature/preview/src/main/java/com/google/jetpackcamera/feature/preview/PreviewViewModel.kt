@@ -16,9 +16,12 @@
 package com.google.jetpackcamera.feature.preview
 
 import android.content.ContentResolver
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
+import kotlinx.coroutines.delay
 import androidx.camera.core.SurfaceRequest
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -36,6 +39,7 @@ import com.google.jetpackcamera.feature.preview.navigation.getCaptureUris
 import com.google.jetpackcamera.feature.preview.navigation.getDebugSettings
 import com.google.jetpackcamera.feature.preview.navigation.getExternalCaptureMode
 import com.google.jetpackcamera.feature.preview.navigation.getRequestedSaveMode
+
 import com.google.jetpackcamera.model.AspectRatio
 import com.google.jetpackcamera.model.CameraZoomRatio
 import com.google.jetpackcamera.model.CaptureEvent
@@ -97,6 +101,7 @@ import com.google.jetpackcamera.ui.uistate.capture.compound.PreviewDisplayUiStat
 import com.google.jetpackcamera.ui.uistate.capture.compound.QuickSettingsUiState
 import com.google.jetpackcamera.ui.uistateadapter.capture.from
 import com.google.jetpackcamera.ui.uistateadapter.capture.updateFrom
+import com.google.jetpackcamera.ui.components.capture.quicksettings.TimerMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.LinkedList
 import javax.inject.Inject
@@ -137,6 +142,7 @@ class PreviewViewModel @Inject constructor(
     private val saveMode: SaveMode = savedStateHandle.getRequestedSaveMode() ?: defaultSaveMode
     private val _captureUiState: MutableStateFlow<CaptureUiState> =
         MutableStateFlow(CaptureUiState.NotReady)
+    private val toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
     private val trackedPreviewUiState: MutableStateFlow<TrackedPreviewUiState> =
         MutableStateFlow(TrackedPreviewUiState())
 
@@ -440,7 +446,7 @@ class PreviewViewModel @Inject constructor(
     private fun ExternalCaptureMode.toCaptureMode() = when (this) {
         ExternalCaptureMode.ImageCapture -> CaptureMode.IMAGE_ONLY
         ExternalCaptureMode.MultipleImageCapture -> CaptureMode.IMAGE_ONLY
-        ExternalCaptureMode.VideoCapture -> CaptureMode.VIDEO_ONLY
+        ExternalCaptureMode.VideoCapture -> CaptureMode.IMAGE_ONLY // Force Video intent to Image for Photo Only app
         ExternalCaptureMode.Standard -> null
     }
 
@@ -645,7 +651,10 @@ class PreviewViewModel @Inject constructor(
         }
     }
 
-    fun captureImage(contentResolver: ContentResolver) {
+    fun captureImage(
+        contentResolver: ContentResolver,
+        timerMode: TimerMode = TimerMode.OFF
+    ) {
         if (captureUiState.value is CaptureUiState.Ready &&
             (captureUiState.value as CaptureUiState.Ready).externalCaptureMode ==
             ExternalCaptureMode.VideoCapture
@@ -654,22 +663,25 @@ class PreviewViewModel @Inject constructor(
             return
         }
 
-        if (captureUiState.value is CaptureUiState.Ready &&
-            (captureUiState.value as CaptureUiState.Ready).externalCaptureMode ==
-            ExternalCaptureMode.VideoCapture
-        ) {
-            addSnackBarData(
-                SnackbarData(
-                    cookie = "Image-ExternalVideoCaptureMode",
-                    stringResource = R.string.toast_image_capture_external_unsupported,
-                    withDismissAction = true,
-                    testTag = IMAGE_CAPTURE_EXTERNAL_UNSUPPORTED_TAG
-                )
-            )
-            return
-        }
         Log.d(TAG, "captureImage")
         viewModelScope.launch {
+            if (timerMode != TimerMode.OFF) {
+                val seconds = timerMode.seconds ?: 0
+                for (i in seconds downTo 1) {
+                    _captureUiState.update { old ->
+                        (old as? CaptureUiState.Ready)?.copy(countdownSeconds = i) ?: old
+                    }
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP)
+                    delay(1000)
+                }
+                // Reset countdown
+                _captureUiState.update { old ->
+                    (old as? CaptureUiState.Ready)?.copy(countdownSeconds = null) ?: old
+                }
+                // Final beep indicating capture
+                 toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2)
+            }
+            
             val (saveLocation, progress) = nextSaveLocation(saveMode)
             captureImageInternal(
                 saveLocation = saveLocation,
@@ -695,29 +707,29 @@ class PreviewViewModel @Inject constructor(
                             ImageCaptureEvent.SingleImageSaved(savedUri)
                         }
                     }
+
                     if (saveLocation !is SaveLocation.Cache) {
                         updateLastCapturedMedia()
                     } else {
-                        savedUri?.let {
+                         savedUri?.let {
                             postCurrentMediaToMediaRepository(
                                 MediaDescriptor.Content.Image(it, null, true)
                             )
                         }
                     }
                     _captureEvents.trySend(event)
-                },
+                 },
                 onFailure = { exception ->
-                    val event = if (progress != null) {
+                     _captureEvents.trySend(if (progress != null) {
                         ImageCaptureEvent.SequentialImageCaptureError(exception, progress)
                     } else {
                         ImageCaptureEvent.SingleImageCaptureError(exception)
-                    }
-
-                    _captureEvents.trySend(event)
+                    })
                 }
             )
         }
     }
+
 
     private suspend fun <T> captureImageInternal(
         saveLocation: SaveLocation,
@@ -772,80 +784,13 @@ class PreviewViewModel @Inject constructor(
     }
 
     fun startVideoRecording() {
-        if (captureUiState.value is CaptureUiState.Ready &&
-            (captureUiState.value as CaptureUiState.Ready).externalCaptureMode ==
-            ExternalCaptureMode.ImageCapture
-        ) {
-            Log.d(TAG, "externalVideoRecording")
-            addSnackBarData(
-                SnackbarData(
-                    cookie = "Video-ExternalImageCaptureMode",
-                    stringResource = R.string.toast_video_capture_external_unsupported,
-                    withDismissAction = true,
-                    testTag = VIDEO_CAPTURE_EXTERNAL_UNSUPPORTED_TAG
-                )
-            )
-            return
-        }
-        Log.d(TAG, "startVideoRecording")
-        recordingJob = viewModelScope.launch {
-            val cookie = "Video-${videoCaptureStartedCount.incrementAndGet()}"
-            val saveMode = saveMode
-            val (saveLocation, _) = nextSaveLocation(saveMode)
-            try {
-                cameraSystem.startVideoRecording(saveLocation) {
-                    var snackbarToShow: SnackbarData?
-                    when (it) {
-                        is OnVideoRecordEvent.OnVideoRecorded -> {
-                            Log.d(TAG, "cameraSystem.startRecording OnVideoRecorded")
-                            val event = if (saveLocation is SaveLocation.Cache) {
-                                VideoCaptureEvent.VideoCached(it.savedUri)
-                            } else {
-                                VideoCaptureEvent.VideoSaved(it.savedUri)
-                            }
-
-                            if (saveLocation !is SaveLocation.Cache) {
-                                updateLastCapturedMedia()
-                            } else {
-                                postCurrentMediaToMediaRepository(
-                                    MediaDescriptor.Content.Video(it.savedUri, null, true)
-                                )
-                            }
-
-                            _captureEvents.trySend(event)
-                            // don't display snackbar for successful capture
-                            snackbarToShow = if (saveLocation is SaveLocation.Cache) {
-                                null
-                            } else {
-                                SnackbarData(
-                                    cookie = cookie,
-                                    stringResource = R.string.toast_video_capture_success,
-                                    withDismissAction = true,
-                                    testTag = VIDEO_CAPTURE_SUCCESS_TAG
-                                )
-                            }
-                        }
-
-                        is OnVideoRecordEvent.OnVideoRecordError -> {
-                            Log.d(TAG, "cameraSystem.startRecording OnVideoRecordError")
-                            _captureEvents.trySend(VideoCaptureEvent.VideoCaptureError(it.error))
-                            snackbarToShow = SnackbarData(
-                                cookie = cookie,
-                                stringResource = R.string.toast_video_capture_failure,
-                                withDismissAction = true,
-                                testTag = VIDEO_CAPTURE_FAILURE_TAG
-                            )
-                        }
-                    }
-
-                    snackbarToShow?.let { data -> addSnackBarData(data) }
-                }
-                Log.d(TAG, "cameraSystem.startRecording success")
-            } catch (exception: IllegalStateException) {
-                Log.d(TAG, "cameraSystem.startVideoRecording error", exception)
-            }
-        }
+        // Photo Only App - Video Recording Disabled
+        Log.d(TAG, "startVideoRecording called but app is Photo Only")
+        return
     }
+
+
+
 
     fun stopVideoRecording() {
         Log.d(TAG, "stopVideoRecording")

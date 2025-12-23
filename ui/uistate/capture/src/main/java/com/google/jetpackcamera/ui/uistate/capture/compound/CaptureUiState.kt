@@ -66,6 +66,7 @@ sealed interface CaptureUiState {
         val zoomUiState: ZoomUiState = ZoomUiState.Unavailable,
         val zoomControlUiState: ZoomControlUiState = ZoomControlUiState.Unavailable,
         val hdrUiState: HdrUiState = HdrUiState.Unavailable,
-        val focusMeteringUiState: FocusMeteringUiState = FocusMeteringUiState.Unspecified
+        val focusMeteringUiState: FocusMeteringUiState = FocusMeteringUiState.Unspecified,
+        val countdownSeconds: Int? = null
     ) : CaptureUiState
 }

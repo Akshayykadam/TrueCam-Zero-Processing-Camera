@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Timer
+
 import androidx.compose.material.icons.filled.Timer10
 import androidx.compose.material.icons.filled.Timer3
 import androidx.compose.material.icons.filled.TimerOff
@@ -82,30 +83,16 @@ fun PixelPhotoSettingsSheet(
     sheetState: SheetState,
     onDismiss: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    // Mode check
-    isVideoMode: Boolean = false,
     // Flash
     currentFlashMode: FlashSettingMode,
     onFlashModeChanged: (FlashSettingMode) -> Unit,
-    // RAW/JPEG
-    currentImageProcessingMode: ImageProcessingMode = ImageProcessingMode.JPEG,
-    onImageProcessingModeChanged: (ImageProcessingMode) -> Unit = {},
+
     // Timer
     currentTimerMode: TimerMode,
     onTimerModeChanged: (TimerMode) -> Unit,
     // Aspect Ratio
     currentAspectRatio: AspectRatioMode,
     onAspectRatioChanged: (AspectRatioMode) -> Unit,
-    // FPS (video only)
-    currentFpsMode: FpsMode = FpsMode.FPS_30,
-    onFpsModeChanged: (FpsMode) -> Unit = {},
-    // Video Resolution (video only)
-    // Video Resolution (video only)
-    currentVideoResolution: VideoResolutionMode = VideoResolutionMode.FHD,
-    onVideoResolutionChanged: (VideoResolutionMode) -> Unit = {},
-    // Photo Resolution (photo only)
-    currentPhotoResolution: PhotoResolution = PhotoResolution.STANDARD,
-    onPhotoResolutionChanged: (PhotoResolution) -> Unit = {},
     // Grid
     isGridEnabled: Boolean = false,
     onGridToggled: (Boolean) -> Unit = {},
@@ -140,7 +127,8 @@ fun PixelPhotoSettingsSheet(
                     )
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp) // Consistent, generous spacing
                 ) {
                     // More light (Flash)
                     PixelSettingRow(
@@ -152,64 +140,6 @@ fun PixelPhotoSettingsSheet(
                         iconProvider = { it.icon }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // RAW/JPEG - interactive selector
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "RAW/JPEG",
-                                fontSize = 13.sp,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                            Text(
-                                text = currentImageProcessingMode.displayName,
-                                fontSize = 15.sp,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        
-                        // RAW buttons row
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            ImageProcessingMode.entries.forEach { mode ->
-                                val isSelected = mode == currentImageProcessingMode
-                                val backgroundColor by animateColorAsState(
-                                    targetValue = if (isSelected) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        Color(0xFF3A3A3A)
-                                    },
-                                    label = "rawBg"
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(backgroundColor)
-                                        .clickable { onImageProcessingModeChanged(mode) }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = mode.displayName,
-                                        color = if (isSelected) Color.Black else Color.White.copy(alpha = 0.7f),
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     // Timer
                     PixelSettingRow(
                         label = "Timer",
@@ -219,8 +149,6 @@ fun PixelPhotoSettingsSheet(
                         onOptionSelected = onTimerModeChanged,
                         iconProvider = { it.icon }
                     )
-
-                    Spacer(modifier = Modifier.height(16.dp))
 
                     // Ratio
                     PixelSettingRow(
@@ -232,194 +160,13 @@ fun PixelPhotoSettingsSheet(
                         iconProvider = { it.icon }
                     )
 
-                    // Photo Resolution selector (photo mode only)
-                    if (!isVideoMode) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        val photoOptions = listOf(PhotoResolution.STANDARD, PhotoResolution.MEDIUM, PhotoResolution.HIGH)
-                        val displayNames = mapOf(
-                            PhotoResolution.STANDARD to "12MP",
-                            PhotoResolution.MEDIUM to "24MP",
-                            PhotoResolution.HIGH to "Max"
-                        )
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Resolution",
-                                    fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.6f)
-                                )
-                                Text(
-                                    text = displayNames[currentPhotoResolution] ?: "Standard",
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-
-                            // Resolution buttons
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                photoOptions.forEach { resolution ->
-                                    val isSelected = resolution == currentPhotoResolution
-                                    val backgroundColor by animateColorAsState(
-                                        targetValue = if (isSelected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color(0xFF3A3A3A)
-                                        },
-                                        label = "photoResBg"
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(20.dp))
-                                            .background(backgroundColor)
-                                            .clickable { onPhotoResolutionChanged(resolution) }
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = displayNames[resolution] ?: "",
-                                            color = if (isSelected) Color.Black else Color.White.copy(alpha = 0.7f),
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // FPS selector (video mode only)
-                    if (isVideoMode) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Frame rate",
-                                    fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.6f)
-                                )
-                                Text(
-                                    text = "${currentFpsMode.fps} fps",
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            
-                            // FPS buttons
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                FpsMode.entries.forEach { fps ->
-                                    val isSelected = fps == currentFpsMode
-                                    val backgroundColor by animateColorAsState(
-                                        targetValue = if (isSelected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color(0xFF3A3A3A)
-                                        },
-                                        label = "fpsBg"
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(backgroundColor)
-                                            .clickable { onFpsModeChanged(fps) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = fps.displayName,
-                                            color = if (isSelected) Color.Black else Color.White.copy(alpha = 0.7f),
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // Video Resolution selector
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Resolution",
-                                    fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.6f)
-                                )
-                                Text(
-                                    text = currentVideoResolution.displayName,
-                                    fontSize = 15.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            
-                            // Resolution buttons (HD, FHD, 4K)
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                VideoResolutionMode.entries.forEach { resolution ->
-                                    val isSelected = resolution == currentVideoResolution
-                                    val backgroundColor by animateColorAsState(
-                                        targetValue = if (isSelected) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color(0xFF3A3A3A)
-                                        },
-                                        label = "resBg"
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(20.dp))
-                                            .background(backgroundColor)
-                                            .clickable { onVideoResolutionChanged(resolution) }
-                                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = resolution.displayName,
-                                            color = if (isSelected) Color.Black else Color.White.copy(alpha = 0.7f),
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }  // End of isVideoMode block
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     // Grid toggle
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.SpaceBetween, // Space between Label and button
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Grid",
                                 fontSize = 13.sp,
@@ -433,7 +180,7 @@ fun PixelPhotoSettingsSheet(
                             )
                         }
                         
-                        // Grid toggle button
+                        // Grid toggle button - naturally right aligned
                         val gridBg by animateColorAsState(
                             targetValue = if (isGridEnabled) {
                                 MaterialTheme.colorScheme.primary
@@ -506,11 +253,11 @@ private fun <T> PixelSettingRow(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween, // Push Label and Buttons apart
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Left: Label and current value
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 fontSize = 13.sp,
@@ -524,7 +271,7 @@ private fun <T> PixelSettingRow(
             )
         }
 
-        // Right: Icon buttons
+        // Right: Icon buttons (Use natural size, align to End)
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -610,14 +357,7 @@ enum class VideoResolutionMode(val displayName: String) {
     UHD("4K")
 }
 
-/**
- * Image processing mode for zero processing / RAW capture
- */
-enum class ImageProcessingMode(val displayName: String) {
-    JPEG("JPEG"),
-    RAW_JPEG("RAW+J"),
-    RAW("RAW")
-}
+
 
 // Preview
 

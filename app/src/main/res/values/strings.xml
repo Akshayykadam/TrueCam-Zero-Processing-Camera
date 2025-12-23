@@ -15,8 +15,8 @@
   ~ limitations under the License.
   -->
 <resources>
-    <string name="app_name_full">Iris Cam</string>
-    <string name="app_name_short">Iris Cam</string>
+    <string name="app_name_full">TrueCam</string>
+    <string name="app_name_short">TrueCam</string>
     <string name="jca_loading">Loading App…</string>
     <string name="camera_not_available">Camera not available</string>
     <string name="external_capture_uri_not_supplied">No parcelable URI is supplied for external capture.</string>
